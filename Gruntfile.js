@@ -2,151 +2,107 @@ module.exports = function(grunt) {
     'use strict';
 
     /**
-     * Require it at the top and pass in the grunt instance
-     */
-    require('time-grunt')(grunt);
-
-    /**
      * Setup configuration
      */
     grunt.initConfig({
-        pkg: grunt.file.readJSON('config/banner.json'),
-        buildTags: "/* Project Name : <%= pkg.application.name %> Release version : <%= pkg.application.version %> */",
+        SERVE: grunt.file.readJSON('config/servefiles.json'),
 
-        configuredFiles: grunt.file.readJSON('config/servefiles.json'),
-        
+        PRODUCT: grunt.file.readJSON('config/banner.json'),
+
+        buildTags: "/* Project Name : <%= PRODUCT.application.name %> Release version : <%= PRODUCT.application.version %> */",
+
         clean: {
-            build: ['prod']
+            build: ['<%= SERVE.build.clean.files %>']
         },
+
         shell: {
             uglify: {
-                command: 'node tools/r.js -o config/build.js'
+                command: [
+                    "node bower_components/rjs/dist/r.js -o config/build/optimize-build.js",
+                    "node bower_components/rjs/dist/r.js -o config/build/copy-build.js",
+                    "rm src/main-optimize.js",
+                    "rm prod/main.js",
+                    "mv prod/main-optimize.js prod/main.js",
+                    "cp -r bower_components prod/bower_components"
+                ].join('&&')
             }
         },
+
         usebanner: {
             buildTags: {
-                options: {
-                    position: 'top',
-                    banner: '<%= buildTags %>',
-                    linebreak: true
-                },
+                options: '<%= SERVE.build.banner.options %>',
                 files: {
-                    src: '<%= configuredFiles.usebanner %>'
+                    src: '<%= SERVE.build.banner.files %>'
                 }
             }
         },
+
         jshint: {
-            options: {
-                jshintrc: 'config/.jshintrc',
-                ignores: '<%= configuredFiles.jshint.ignore %>'
-            },
-            all: '<%= configuredFiles.jshint.files %>'
+            options: '<%= SERVE.lint.js.options %>',
+            all: '<%= SERVE.lint.js.files %>'
         },
+
         jscs: {
-            options: {
-                config: 'config/.jscsrc'
-            },
-            src: '<%= configuredFiles.jscs.files %>',
+            options: '<%= SERVE.lint.jscs.options %>',
+            src: '<%= SERVE.lint.jscs.files %>',
         },
+
         jsonlint: {
-            files: {
-                src: '<%= configuredFiles.jsonlint %>'
-            }
+            files: '<%= SERVE.lint.json.files %>'
         },
+
         csslint: {
             strict: {
-                options: {
-                    csslintrc: 'config/.csslintrc',
-                    ignores: '<%= configuredFiles.csslint.ignore %>'
-                },
-                src: '<%= configuredFiles.csslint.files %>'
+                options: '<%= SERVE.lint.css.options %>',
+                src: '<%= SERVE.lint.css.files %>'
             }
         },
+
         htmlhint: {
             Root_HTML_Files: {
-                options: {
-                    htmlhintrc: 'config/.htmlhint-n-rc',
-                    ignores: '<%= configuredFiles.htmlhint.Root_HTML_Files.ignore %>'
-                },
-                src: '<%= configuredFiles.htmlhint.Root_HTML_Files.files %>'
+                options: '<%= SERVE.lint.html.root.options %>',
+                src: '<%= SERVE.lint.html.root.files %>'
             },
             Templates: {
-                options: {
-                    htmlhintrc: 'config/.htmlhint-t-rc',
-                    ignores: '<%= configuredFiles.htmlhint.Templates.ignore %>'
-                },
-                src: '<%= configuredFiles.htmlhint.Templates.files %>'
+                options: '<%= SERVE.lint.html.template.options %>',
+                src: '<%= SERVE.lint.html.template.files %>'
+            }
+        },
 
-            }
-        },
         less: {
-            readyMade: {
-                options: {
-                    compress: true
-                },
-                files: '<%= configuredFiles.less.readyMade.files %>'
-            },
-            customMade: {
-                options: {
-                    compress: false
-                },
-                files: '<%= configuredFiles.less.customMade.files %>'
-            },
-            prod: {
-                options: {
-                    compress: true
-                },
-                files: '<%= configuredFiles.less.customMade.files %>'
+            dev: {
+                options: '<%= SERVE.compile.less.options %>',
+                files: '<%= SERVE.compile.less.files %>'
             }
         },
+
         watch: {
             less: {
-                options: {
-                    spawn: false
-                },
-                files: '<%= configuredFiles.watch.less.files %>',
-                tasks: ['less:customMade']
+                options: '<%= SERVE.watch.less.options %>',
+                files: '<%= SERVE.watch.less.files %>',
+                tasks: ['less:dev']
             }
         },
-        qunit: {
-            options: {
-                '--web-security': 'no',
-                coverage: {
-                    src: ['src/**/*.js'],
-                    instrumentedFiles: 'temp/',
-                    htmlReport: 'report/coverage',
-                    coberturaReport: 'report/'
-                }
-            },
-            all: ['tests/**/*.html']
-        },
+
         strip: {
             main: {
-                src: 'prod/src/apps/**/*.js',
-                options: {
-                    inline: true,
-                    nodes: ['console.log', 'debug']
-                }
+                src: '<%= SERVE.build.strip.files %>',
+                options: '<%= SERVE.build.strip.options %>'
             }
         },
-        autoprefixer: {
-            options: {
-                'browsers': ['last 2 versions']
-            },
-            multiple: {
-                expand: true,
-                flatten: true,
-                src: 'src/stylesheets/css/common/*.css',
-                dest: 'src/stylesheets/css/common/'
-            }
-        },
+
         htmlmin: {
             dist: {
-                options: {
-                    removeComments: true,
-                    collapseWhitespace: true
-                },
-                files: '<%= configuredFiles.htmlmin.files %>'
+                options: '<%= SERVE.build.minify.html.options %>',
+                files: '<%= SERVE.build.minify.html.files %>'
+            }
+        },
+
+        plato: {
+            report: {
+                files: {
+                    'reports': '<%= SERVE.lint.reports.files %>'
+                }
             }
         }
     });
@@ -164,56 +120,53 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-csslint');
     grunt.loadNpmTasks('grunt-htmlhint');
     grunt.loadNpmTasks('grunt-contrib-htmlmin');
-    grunt.loadNpmTasks('grunt-autoprefixer');
-    grunt.loadNpmTasks('grunt-contrib-qunit');
     grunt.loadNpmTasks('grunt-jsonlint');
     grunt.loadNpmTasks('grunt-banner');
+    grunt.loadNpmTasks('grunt-plato');
 
     /**
      * Define tasks : Tasks for development eco - system.
      */
     grunt.registerTask('default', [
         'htmlhint',
-        'csslint',
-        'jshint',
-        'jscs',
         'jsonlint',
-        'less:readyMade',
-        'less:customMade',
-        'autofix'
+        'jscs',
+        'jshint',
+        'compileLessDev',
+        'csslint',
+        'plato'
     ]);
-    grunt.registerTask('dev', ['default']); // Alias for `default`.
 
     /**
      * Define tasks : Tasks for build eco - system.
      */
     grunt.registerTask('build', [
         'htmlhint',
-        'csslint',
-        'jshint',
         'jsonlint',
-        'compileless',
-        'autofix',
+        'jscs',
+        'jshint',
+        'compileLessDev',
+        'csslint',
+        'plato',
         'clean',
-        'shell',
         'strip',
+        'shell',
         'htmlmin',
         'usebanner'
     ]);
 
     /**
-     * Define sub-tasks : Tasks for Less compilation.
+     * Define tasks : Tasks for less:compilation watch, Also alias for `watch`
      */
-    grunt.registerTask('compileless', ['less:readyMade', 'less:customMade']);
+    grunt.registerTask('watchless', ['watch:less']);
 
     /**
-     * Define sub-tasks : Alias for `autofix`
+     * Define sub-tasks : Tasks for Less compilation for development.
      */
-    grunt.registerTask('autofix', ['autoprefixer']);
+    grunt.registerTask('compileLessDev', ['less:dev']);
 
     /**
-     * Define sub-tasks : Alias for `tests`
+     * Define sub-tasks : Alias for `plato`
      */
-    grunt.registerTask('tests', ['qunit']);
-
+    grunt.registerTask('analysis', ['plato']);
 };

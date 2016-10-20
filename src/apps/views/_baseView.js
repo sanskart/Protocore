@@ -1,27 +1,36 @@
-define(function(require) {
-	'use strict';
+define(['jquery', 'handlebars'], function($, Handlebars) {
+    'use strict';
 
-	var $ = require('jquery');
+    var BaseView = function(el, template) {
+        this.el = el || 'body';
+        this.template = template;
+    };
 
-	var BaseView = function(el, template) {
-		this.el = el || 'body';
+    BaseView.prototype.initialize = function() {
+        console.log("LOG: Initialize Baseview");
 
-		this.template = template;
-	};
+        this.render();
+    };
 
-	BaseView.prototype.initialize = function() {
-		console.log("LOG: Initialize Baseview");
+    BaseView.prototype.render = function() {
+        console.log("LOG: Executed Baseview Render");
 
-		this.render();
-	};
+        if (this.beforeRender) {
+            this.beforeRender();
+        }
 
-	BaseView.prototype.render = function() {
-		console.log("LOG: Executed Baseview Render");
+        if (this.template && this.el) {
+            $(this.el).html(Handlebars.compile(this.template));
 
-		if (this.template && this.el) {
-			$(this.el).html(this.template);
-		}
-	};
+            if (this.afterRender) {
+                this.afterRender();
+            }
 
-	return BaseView;
+            if (this.eventsHash) {
+                this.eventsHash();
+            }
+        }
+    };
+
+    return BaseView;
 });
